@@ -10,6 +10,43 @@ const api = axios.create({
   },
 });
 
+// devolver el array u objeto de movies que tengamos en localStorage
+function likedMoviesList() {
+
+  // convertimos todo en string
+  const item = JSON.parse(localStorage.getItem('liked-movies'));
+  let movies;
+  // Si hay algo devolvemos ese algo
+  if (item) {
+    movies = item;
+
+  // si no hay nada devolvemos un objeto vacio
+  } else {
+    movies = {};
+  }
+
+  return movies
+}
+
+function likedMovie(movie) {
+
+  const likedMovies = likedMoviesList();
+
+  if (likedMovies[movie.id]) {
+
+    // remover la movie de localStorage
+    likedMovies[movie.id] = undefined;
+
+  } else {
+
+    // Agregar la movie a localStorage
+    likedMovies[movie.id] = movie;
+  }
+
+  // Guardando la pelicula en favoritos y convertimos todo en un objeto
+  localStorage.setItem('liked-movies', JSON.stringify(likedMovies));
+}
+
 // Helpers
 
 // Lazy Loader
@@ -41,9 +78,6 @@ function createMovies(
 
     // le agregamos la clase movie-container
     movieContainer.classList.add('movie-container');
-    movieContainer.addEventListener('click', () => {
-      location.hash = '#movie=' + movie.id;
-    });
 
     // creamos una etiqueta de img
     const movieImg = document.createElement('img');
@@ -58,6 +92,10 @@ function createMovies(
       'https://image.tmdb.org/t/p/w300' + movie.poster_path,
     );
 
+    movieImg.addEventListener('click', () => {
+      location.hash = '#movie=' + movie.id;
+    });
+
     //Agregar imagen por defecto si alguna falla
     movieImg.addEventListener('error', () => {
       movieImg.setAttribute(
@@ -66,12 +104,27 @@ function createMovies(
       );
     })
 
+    const movieBtn = document.createElement('button');
+    movieBtn.classList.add('movie-btn');
+    likedMoviesList()[movie.id] && movieBtn.classList.add('movie-btn--liked');
+    movieBtn.addEventListener('click', () => {
+      // para que agregue y quete la esta clase
+      movieBtn.classList.toggle('movie-btn--liked');
+
+      // LocalStorage
+      likedMovie(movie);
+
+      // para que se agreguen las movies a favoritos sin tener que recargar la pagina
+      getLikedMovies();
+    })
+
     if (lazyLoad) {
       lazyLoader.observe(movieImg);
     }
 
     // le agregamos la imagen de cada poster a la etiqueda de div
     movieContainer.appendChild(movieImg);
+    movieContainer.appendChild(movieBtn);
     container.appendChild(movieContainer);
   });
 }
@@ -111,7 +164,7 @@ async function getTrendingMoviesPreview() {
   // ***** Axios ***** //
   const { data } = await api('trending/movie/day');
   const movies = data.results;
-  console.log(movies)
+  // console.log(movies)
 
   // seleccionando el tag de trendingPreview-movieList
   createMovies(movies, trendingMoviesPreviewList, true);
@@ -293,4 +346,14 @@ async function getRelatedMoviesId(id) {
   const relatedMovies = data.results;
 
   createMovies(relatedMovies, relatedMoviesContainer);
+}
+
+// funcion para consumir LocalStorage
+function getLikedMovies() {
+  const likedMovies = likedMoviesList();
+  const moviesArray = Object.values(likedMovies);
+
+  createMovies(moviesArray, likedMoviesListArticle, { lazyLoad: true, clean: true });
+
+  // console.log(likedMovies)
 }
